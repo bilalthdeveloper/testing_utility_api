@@ -93,7 +93,7 @@ func (ps *ProxyService) GetWsConn(ctx context.Context, proxyStr string, wsURL st
 			}
 
 			req := &http.Request{
-				Method: "CONNECT",
+				Method: "GET",
 				URL:    &url.URL{Host: addr},
 				Host:   addr,
 			}

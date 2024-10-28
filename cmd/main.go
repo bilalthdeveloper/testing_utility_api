@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/bilalthdeveloper/kadrion/internal/proxy"
 	"github.com/bilalthdeveloper/kadrion/internal/sse"
 	"github.com/bilalthdeveloper/kadrion/internal/ws"
 	"github.com/bilalthdeveloper/kadrion/utils"
@@ -33,11 +34,11 @@ func main() {
 	if err != nil {
 		utils.LogMessage(err.Error(), 1)
 	}
-
+	p := proxy.Initialize()
 	switch Type {
 	case "ws":
-		ws.RunWebsocketTest(ctx, addr, initialCount, PumpCount, duration)
+		ws.RunWebsocketTest(ctx, addr, initialCount, PumpCount, duration, p)
 	case "sse":
-		sse.RunSseTest(ctx, addr, initialCount, duration)
+		sse.RunSseTest(ctx, addr, initialCount, PumpCount, duration, p)
 	}
 }

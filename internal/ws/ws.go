@@ -4,35 +4,32 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/bilalthdeveloper/kadrion/internal/core"
+	"github.com/bilalthdeveloper/kadrion/internal/proxy"
 	"github.com/bilalthdeveloper/kadrion/utils"
 	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 )
 
-type Result struct {
-	initialCount int64
-	StopCount    int64
-	Passed       int64
-	Failed       int64
-}
-
-func RunWebsocketTest(ctx context.Context, addr string, initialCount int64, PumpCount int64, duration int64) {
+func RunWebsocketTest(ctx context.Context, addr string, initialCount int64, PumpCount int64, duration int64, p *proxy.ProxyService) {
 	var global atomic.Uint64
 	global.Store(0)
 	Signal := make(chan int, 10000)
 
-	result := Result{
-		initialCount: initialCount,
+	result := core.Result{
+		InitialCount: initialCount,
 		Passed:       0,
 		Failed:       0,
 		StopCount:    utils.CalculateStopCount(initialCount, PumpCount),
 	}
 
 	go func() {
-		Run(ctx, result, PumpCount, addr, Signal, duration, &global)
+		RunSocketTest(ctx, result, PumpCount, addr, Signal, duration, &global, p)
 	}()
 
 	for {
@@ -58,41 +55,55 @@ func RunWebsocketTest(ctx context.Context, addr string, initialCount int64, Pump
 	}
 }
 
-func Run(ctx context.Context, result Result, PumpCount int64, addr string, signal chan int, d int64, counter *atomic.Uint64) {
-	utils.WelComePrint(fmt.Sprintf("Addr Given %v", addr), fmt.Sprintf("Count Given %v", result.initialCount), fmt.Sprintf("Duration Given %v", d), fmt.Sprintf("PumpCount %v", PumpCount))
+func RunSocketTest(ctx context.Context, result core.Result, PumpCount int64, addr string, signal chan int, d int64, counter *atomic.Uint64, p *proxy.ProxyService) {
+	utils.WelComePrint(fmt.Sprintf("Addr Given %v", addr), fmt.Sprintf("Count Given %v", result.InitialCount), fmt.Sprintf("Duration Given %v", d), fmt.Sprintf("PumpCount %v", PumpCount))
+	ctx, _ = context.WithTimeout(ctx, time.Second*10)
+
 	for {
 
-		for i := 0; i <= int(result.initialCount); i++ {
+		for i := 0; i <= int(result.InitialCount); i++ {
 			go func() {
 				var mu sync.Mutex
 				mu.Lock()
-				WsIoLoop(ctx, addr, signal, d, counter)
+				WsIoLoop(ctx, addr, signal, d, counter, p)
 				mu.Unlock()
 			}()
 		}
 
-		utils.LogMessage(fmt.Sprintf("Users Dispatched %v", result.initialCount), 3)
+		utils.LogMessage(fmt.Sprintf("Users Dispatched %v", result.InitialCount), 3)
 		if PumpCount == 0 {
 			break
 		}
 		PumpCount--
-		result.initialCount = result.initialCount * 2
+		result.InitialCount = result.InitialCount * 2
 
 		time.Sleep(time.Second * 1)
 	}
 
 }
 
-func WsIoLoop(ctx context.Context, addr string, signal chan int, d int64, counter *atomic.Uint64) {
+func WsIoLoop(ctx context.Context, addr string, signal chan int, d int64, counter *atomic.Uint64, p *proxy.ProxyService) {
+
 	if d > 0 {
 		duration := time.Second * time.Duration(d)
-
-		conn, _, _, err := ws.Dial(ctx, addr)
-		if err != nil {
-			signal <- 1
-			counter.Add(1)
-			return
+		var conn net.Conn
+		var err error
+		if p.HasProxies() {
+			conn, err = p.GetWsConn(ctx, p.GetRandomProxy(), addr)
+			if err != nil {
+				signal <- 1
+				counter.Add(1)
+				return
+			}
+		} else {
+			conn, _, _, err = ws.Dial(ctx, addr)
+			if err != nil {
+				signal <- 1
+				counter.Add(1)
+				return
+			}
 		}
+
 		timeout := time.After(duration)
 
 		for {
@@ -108,9 +119,7 @@ func WsIoLoop(ctx context.Context, addr string, signal chan int, d int64, counte
 				return
 
 			default:
-				var data []byte
-				_, err := conn.Read(data)
-
+				_, _, err := wsutil.ReadServerData(conn)
 				if err != nil {
 					signal <- 1
 					counter.Add(1)
@@ -122,15 +131,25 @@ func WsIoLoop(ctx context.Context, addr string, signal chan int, d int64, counte
 		}
 	} else {
 
-		conn, _, _, err := ws.Dial(ctx, addr)
-		if err != nil {
-			signal <- 1
-			counter.Add(1)
-			return
+		var conn net.Conn
+		var err error
+		if p.HasProxies() {
+			conn, err = p.GetWsConn(ctx, p.GetRandomProxy(), addr)
+			if err != nil {
+				signal <- 1
+				counter.Add(1)
+				return
+			}
+		} else {
+			conn, _, _, err = ws.Dial(ctx, addr)
+			if err != nil {
+				signal <- 1
+				counter.Add(1)
+				return
+			}
 		}
 		for {
-
-			_, err = conn.Write([]byte("Ping"))
+			err = wsutil.WriteClientMessage(conn, ws.OpText, []byte("Ping"))
 			if err != nil {
 				signal <- 1
 				counter.Add(1)

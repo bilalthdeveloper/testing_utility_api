@@ -16,3 +16,17 @@ Fifth second: 160 users --pump count 0
 If pump count is set to zero then only initial users connection will be eastablished
 ### Type (string)
 Test type "ws" for websocket or "sse" for sse
+
+
+### With Proxy
+Keep the txt file of proxies in directory when running binary
+
+
+
+
+## Install
+make install
+
+
+## remove
+make remove

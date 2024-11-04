@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/bilalthdeveloper/kadrion/internal/flv"
 	"github.com/bilalthdeveloper/kadrion/internal/hls"
 	"github.com/bilalthdeveloper/kadrion/internal/proxy"
 	"github.com/bilalthdeveloper/kadrion/internal/sse"
@@ -43,6 +44,8 @@ func main() {
 		sse.RunSseTest(ctx, addr, initialCount, PumpCount, duration, p)
 	case "hls":
 		hls.RunHlsTest(ctx, addr, initialCount, PumpCount, duration, p)
+	case "flv":
+		flv.RunFlvTest(ctx, addr, initialCount, PumpCount, duration, p)
 	}
 
 }

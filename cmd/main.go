@@ -7,7 +7,6 @@ import (
 
 	"github.com/bilalthdeveloper/kadrion/internal/flv"
 	"github.com/bilalthdeveloper/kadrion/internal/hls"
-	"github.com/bilalthdeveloper/kadrion/internal/proxy"
 	"github.com/bilalthdeveloper/kadrion/internal/sse"
 	"github.com/bilalthdeveloper/kadrion/internal/ws"
 	"github.com/bilalthdeveloper/kadrion/utils"
@@ -31,21 +30,20 @@ func main() {
 	if err != nil {
 		utils.LogMessage(err.Error(), 1)
 	}
-
 	duration, err := strconv.ParseInt(os.Args[3], 10, 64)
 	if err != nil {
 		utils.LogMessage(err.Error(), 1)
 	}
-	p := proxy.Initialize()
+
 	switch Type {
 	case "ws":
-		ws.RunWebsocketTest(ctx, addr, initialCount, PumpCount, duration, p)
+		ws.RunWebsocketTest(ctx, addr, initialCount, PumpCount, duration)
 	case "sse":
-		sse.RunSseTest(ctx, addr, initialCount, PumpCount, duration, p)
+		sse.RunSseTest(ctx, addr, initialCount, PumpCount, duration)
 	case "hls":
-		hls.RunHlsTest(ctx, addr, initialCount, PumpCount, duration, p)
+		hls.RunHlsTest(ctx, addr, initialCount, PumpCount, duration)
 	case "flv":
-		flv.RunFlvTest(ctx, addr, initialCount, PumpCount, duration, p)
+		flv.RunFlvTest(ctx, addr, initialCount, PumpCount, duration)
 	}
 
 }

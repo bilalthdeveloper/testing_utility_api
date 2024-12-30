@@ -11,11 +11,10 @@ import (
 	"time"
 
 	"github.com/bilalthdeveloper/kadrion/internal/core"
-	"github.com/bilalthdeveloper/kadrion/internal/proxy"
 	"github.com/bilalthdeveloper/kadrion/utils"
 )
 
-func RunSseTest(ctx context.Context, addr string, initialCount int64, PumpCount int64, duration int64, p *proxy.ProxyService) {
+func RunSseTest(ctx context.Context, addr string, initialCount int64, PumpCount int64, duration int64) {
 	var global atomic.Uint64
 	global.Store(0)
 	Signal := make(chan int, 10000)
@@ -53,10 +52,10 @@ func RunSseTest(ctx context.Context, addr string, initialCount int64, PumpCount 
 
 	}
 }
+
 func RunHttpTest(ctx context.Context, result core.Result, PumpCount int64, addr string, signal chan int, d int64, counter *atomic.Uint64) {
 	utils.WelComePrint(fmt.Sprintf("Addr Given %v", addr), fmt.Sprintf("Count Given %v", result.InitialCount), fmt.Sprintf("Duration Given %v", d), fmt.Sprintf("PumpCount %v", PumpCount))
 	for {
-
 		for i := 0; i <= int(result.InitialCount); i++ {
 			go func() {
 				var mu sync.Mutex
@@ -65,21 +64,17 @@ func RunHttpTest(ctx context.Context, result core.Result, PumpCount int64, addr 
 				mu.Unlock()
 			}()
 		}
-
 		utils.LogMessage(fmt.Sprintf("Users Dispatched %v", result.InitialCount), 3)
 		if PumpCount == 0 {
 			break
 		}
 		PumpCount--
 		result.InitialCount = result.InitialCount * 2
-
 		time.Sleep(time.Second * 1)
 	}
-
 }
 
 func SseIoLoop(ctx context.Context, addr string, signal chan int, d int64, counter *atomic.Uint64) {
-
 	if d > 1 {
 		duration := time.Second * time.Duration(d)
 		req, err := http.NewRequest("GET", addr, nil)
@@ -108,7 +103,6 @@ func SseIoLoop(ctx context.Context, addr string, signal chan int, d int64, count
 		for {
 			select {
 			case <-timeout:
-
 				err := resp.Body.Close()
 				if err != nil {
 				}
@@ -116,13 +110,11 @@ func SseIoLoop(ctx context.Context, addr string, signal chan int, d int64, count
 				counter.Add(1)
 				return
 			default:
-
 				if err := scanner.Err(); err != nil {
 					signal <- 1
 					counter.Add(1)
 					return
 				}
-
 			}
 		}
 	} else {

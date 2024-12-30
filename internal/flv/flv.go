@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/bilalthdeveloper/kadrion/internal/core"
-	"github.com/bilalthdeveloper/kadrion/internal/proxy"
 	"github.com/bilalthdeveloper/kadrion/utils"
 	"github.com/gwuhaolin/livego/av"
 	"github.com/gwuhaolin/livego/utils/pio"
@@ -32,7 +31,7 @@ type FLVWriter struct {
 	packetQueue chan *av.Packet
 }
 
-func RunFlvTest(ctx context.Context, addr string, initialCount int64, PumpCount int64, duration int64, p *proxy.ProxyService) {
+func RunFlvTest(ctx context.Context, addr string, initialCount int64, PumpCount int64, duration int64) {
 	var global atomic.Uint64
 	global.Store(0)
 	Signal := make(chan int, 10000)
@@ -45,7 +44,7 @@ func RunFlvTest(ctx context.Context, addr string, initialCount int64, PumpCount 
 	}
 
 	go func() {
-		RunBufferStreamTest(ctx, result, PumpCount, addr, Signal, duration, &global, p)
+		RunBufferStreamTest(ctx, result, PumpCount, addr, Signal, duration, &global)
 	}()
 
 	for {
@@ -73,20 +72,17 @@ func RunFlvTest(ctx context.Context, addr string, initialCount int64, PumpCount 
 	}
 }
 
-func RunBufferStreamTest(ctx context.Context, result core.Result, PumpCount int64, addr string, signal chan int, d int64, counter *atomic.Uint64, p *proxy.ProxyService) {
+func RunBufferStreamTest(ctx context.Context, result core.Result, PumpCount int64, addr string, signal chan int, d int64, counter *atomic.Uint64) {
 	utils.WelComePrint(fmt.Sprintf("Addr Given %v", addr), fmt.Sprintf("Count Given %v", result.InitialCount), fmt.Sprintf("Duration Given %v", d), fmt.Sprintf("PumpCount %v", PumpCount))
-
 	for {
-
 		for i := 0; i <= int(result.InitialCount); i++ {
 			go func() {
 				var mu sync.Mutex
 				mu.Lock()
-				FlvIoLoop(ctx, addr, signal, d, counter, p)
+				FlvIoLoop(ctx, addr, signal, d, counter)
 				mu.Unlock()
 			}()
 		}
-
 		utils.LogMessage(fmt.Sprintf("Users Dispatched %v", result.InitialCount), 3)
 		if PumpCount == 0 {
 			break
@@ -99,7 +95,7 @@ func RunBufferStreamTest(ctx context.Context, result core.Result, PumpCount int6
 
 }
 
-func FlvIoLoop(ctx context.Context, addr string, signal chan int, d int64, counter *atomic.Uint64, p *proxy.ProxyService) {
+func FlvIoLoop(ctx context.Context, addr string, signal chan int, d int64, counter *atomic.Uint64) {
 
 	if d > 0 {
 

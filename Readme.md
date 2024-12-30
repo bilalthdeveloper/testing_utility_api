@@ -18,12 +18,6 @@ If pump count is set to zero then only initial users connection will be eastabli
 Test type "ws" for websocket or "sse" for sse
 
 
-### With Proxy
-Keep the txt file of proxies in directory when running binary
-
-
-
-
 ## Install
 make install
 
